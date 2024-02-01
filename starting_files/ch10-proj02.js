@@ -22,10 +22,25 @@ document.addEventListener("DOMContentLoaded", function() {
          const sceneListSelect = document.getElementById('sceneList');
          const actNameHeading = document.querySelector('#actHere h3');
          const sceneNameHeading = document.querySelector('#sceneHere h4');
-         const titleHeading = document.querySelector('.title p');
-         const directionHeading = document.querySelector('.direction p');
+         const titleHeading = document.querySelector('.title');
+         const directionHeading = document.querySelector('.direction');
          let data;
-     
+
+         const btnHighlight = document.getElementById('btnHighlight');
+         const txtHighlight = document.getElementById('txtHighlight');
+
+         btnHighlight.addEventListener('click', function() {
+            const filterText = txtHighlight.value.trim().toLowerCase();
+        
+            const paragraphs = document.querySelectorAll('.speech p');
+            
+            paragraphs.forEach(paragraph => {
+                const text = paragraph.textContent.toLowerCase();
+                const highlightedText = text.replace(new RegExp(filterText, 'gi'), match => `<b>${match}</b>`);
+                paragraph.innerHTML = highlightedText;
+            });
+        });
+// Function to check if a match is a whole word
          // Add change event handler to playList select
          playListSelect.addEventListener('change', function() {
             // Get the selected play value from the option
@@ -39,16 +54,26 @@ document.addEventListener("DOMContentLoaded", function() {
                     .then(playData => {
                         // Assign the fetched data to the global variable
                         data = playData;
-    
+                         const scene = data.acts[0].scenes[0];
                         // Populate actList and playerList from the fetched data
                         populateSelect('actList', data.acts.map(act => act.name));
                         populatePlayerList(playData.persona);
                         populateTitle(data.title);
+                        populateSceneTitle(scene.title);
+                        populateSceneDirection(scene.stageDirection);
                     })
                     .catch(error => console.error('Error fetching play data:', error));
             }
         });
     
+        function populateSceneTitle(sceneTitle) {
+            titleHeading.textContent = sceneTitle;
+        }
+
+        function populateSceneDirection(sceneDirection) {
+            directionHeading.textContent = sceneDirection;
+        }
+
         // Add change event handler to actList select
         actListSelect.addEventListener('change', function() {
             const selectedAct = actListSelect.value;
@@ -68,24 +93,27 @@ document.addEventListener("DOMContentLoaded", function() {
         // Add change event handler to sceneList select
         sceneListSelect.addEventListener('change', function() {
             const selectedScene = sceneListSelect.value;
-    
+        
             if (selectedScene !== '0') {
                 // Find the selected scene within the data
                 const selectedAct = actListSelect.value; // Get the selected act
-                const scene = data.acts.find(act => act.name === selectedAct)
-                                     .scenes.find(scene => scene.name === selectedScene);
+                const selectedActData = data.acts.find(act => act.name === selectedAct);
+                const scene = selectedActData.scenes.find(scene => scene.name === selectedScene);
                 const speeches = scene.speeches;
-    
+        
                 // Update HTML content with fetched speeches
                 updateSpeeches(speeches);
-    
+        
                 // Update scene name heading
                 sceneNameHeading.textContent = `Scene name: ${selectedScene}`;
+        
+                // Update scene title and direction
+                populateSceneTitle(scene.title);
+                populateSceneDirection(scene.stageDirection);
             } else {
                 resetSpeeches();
             }
         });
-
         // Function to populate the player select dropdown
         function populatePlayerList(players) {
             // Clear previous options
@@ -114,6 +142,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 console.log('No h2 tag found in the document.');
             }
         }
+
+
         // Function to populate a select element with options
         function populateSelect(selectId, options) {
             const selectElement = document.getElementById(selectId);
@@ -135,6 +165,31 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         }
     
+        function playerFilter(selectedPlayer, currentScene) {
+            const speeches = document.querySelectorAll('.speech');
+            
+            speeches.forEach(speech => {
+                const speaker = speech.querySelector('span').textContent;
+                if (selectedPlayer === 'All Players') {
+                    if (speech.dataset.scene === currentScene) {
+                        speech.style.display = 'block'; // Show speech for current scene
+                    } else {
+                        speech.style.display = 'none'; // Hide speech for other scenes
+                    }
+                } else if (selectedPlayer === speaker) {
+                    speech.style.display = 'block'; // Show speech for selected player
+                } else {
+                    speech.style.display = 'none'; // Hide speech for other players
+                }
+            });
+        }
+        
+        playerList.addEventListener('change', function() {
+            const selectedPlayer = playerList.value;
+        
+            playerFilter(selectedPlayer);
+        });
+
         function updateSpeeches(speeches) {
             const sceneDiv = document.getElementById('sceneHere');
         
